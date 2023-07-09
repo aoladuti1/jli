@@ -2,3 +2,5 @@
 target/
 
 .editorconfig
+
+.vscode/settings.json
