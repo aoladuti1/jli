@@ -28,7 +28,7 @@ class AppTest {
             BigDecimal x = new BigDecimal(f);
             l.add(x);
 
-            Object o = JLI.call(Binder.class, "Binder", l);
+            Object o = JLI.call(Tester.class, "Tester", l);
             System.out.println(o);
             Object a = JLI.call(ArrayList.class, "ArrayList", l2);
             Object b = Integer.valueOf(4);
@@ -38,7 +38,7 @@ class AppTest {
             l2.add(null);
             JLI.call(a, "add", l2);
             System.out.println(a);
-            JLI.call(JLI.getFieldOrInnerClass(JLI.call(Binder.class, "Binder", new ArrayList<>()).getClass(), "EV"), "c", new ArrayList<Object>());
+            JLI.call(JLI.getFieldOrInnerClass(JLI.call(Tester.class, "Tester", new ArrayList<>()).getClass(), "EV"), "c", new ArrayList<Object>());
 
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -51,13 +51,13 @@ class AppTest {
         ArrayList<Object> ll = new ArrayList<>();
         ArrayList<Object> nl = new ArrayList<>();
         nl.add(null);
-        assertTrue(!((boolean) JLI.call(Binder.class, "ob", nl)));
+        assertTrue(!((boolean) JLI.call(Tester.class, "ob", nl)));
     }
 
     @Test
     void testCallNull() {
         ArrayList<Object> nL = new ArrayList<>();
         nL.add(5);
-        assertTrue((boolean) JLI.call(Binder.class, "ob", nL));
+        assertTrue((boolean) JLI.call(Tester.class, "ob", nL));
     }
 }

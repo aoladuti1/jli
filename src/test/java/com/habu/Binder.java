@@ -1,20 +1,20 @@
 package com.habu;
 
-public class Binder {
+public class Tester {
 
     public static class EV {
         public static void c() {
         }
     }
 
-    public Binder() {
+    public Tester() {
     }
 
-    public Binder(int x) {
+    public Tester(int x) {
         System.out.println("__");
     }
 
-    public Binder(char x) {
+    public Tester(char x) {
         System.out.println("___");
 
     }
