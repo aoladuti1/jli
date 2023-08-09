@@ -18,8 +18,8 @@ class AppTest {
      */
     @Test
     void testApp() {
-        JLI.scanImport("com.habu.*");
-        JLI.scanImport("java.util.ArrayList");
+        JPI.scanImport("com.habu.*");
+        JPI.scanImport("java.util.ArrayList");
         ArrayList<Object> l = new ArrayList<>();
         ArrayList<Object> l2 = new ArrayList<>();
 
@@ -28,17 +28,17 @@ class AppTest {
             BigDecimal x = new BigDecimal(f);
             l.add(x);
 
-            Object o = JLI.call(Tester.class, "Tester", l);
+            Object o = JPI.call(Tester.class, "Tester", l);
             System.out.println(o);
-            Object a = JLI.call(ArrayList.class, "ArrayList", l2);
+            Object a = JPI.call(ArrayList.class, "ArrayList", l2);
             Object b = Integer.valueOf(4);
             l2.add(b);
-            JLI.call(a, "add", l2);
+            JPI.call(a, "add", l2);
             l2.clear();
             l2.add(null);
-            JLI.call(a, "add", l2);
+            JPI.call(a, "add", l2);
             System.out.println(a);
-            JLI.call(JLI.getFieldOrInnerClass(JLI.call(Tester.class, "Tester", new ArrayList<>()).getClass(), "EV"), "c", new ArrayList<Object>());
+            JPI.call(JPI.getFieldOrInnerClass(JPI.call(Tester.class, "Tester", new ArrayList<>()).getClass(), "EV"), "c", new ArrayList<Object>());
 
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -51,13 +51,13 @@ class AppTest {
         ArrayList<Object> ll = new ArrayList<>();
         ArrayList<Object> nl = new ArrayList<>();
         nl.add(null);
-        assertTrue(!((boolean) JLI.call(Tester.class, "ob", nl)));
+        assertTrue(!((boolean) JPI.call(Tester.class, "ob", nl)));
     }
 
     @Test
     void testCallNull() {
         ArrayList<Object> nL = new ArrayList<>();
         nL.add(5);
-        assertTrue((boolean) JLI.call(Tester.class, "ob", nL));
+        assertTrue((boolean) JPI.call(Tester.class, "ob", nL));
     }
 }

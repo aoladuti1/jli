@@ -141,7 +141,7 @@ enum NumRank {
   static int scoreMatch(Object argObj, Class<?> argClass, Class<?> paramClass) {
     NumRank argRank;
     NumRank paramRank = rank(paramClass);
-    boolean bigDecPassed = BigDecimal.class.isAssignableFrom(argClass) && JLI.recastingBigDecs;
+    boolean bigDecPassed = BigDecimal.class.isAssignableFrom(argClass) && JPI.recastingBigDecs;
     argRank = bigDecPassed ? rank((BigDecimal) argObj) : rank(argClass);
     if (argRank == NAN) {
       return 0; 
