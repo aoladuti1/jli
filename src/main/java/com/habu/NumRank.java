@@ -3,9 +3,8 @@ package com.habu;
 import java.math.BigDecimal;
 
 /**
- * Linkage of numerical classes and primitives to their underlying representation.
- * This class exists for classifying number types as BYTE SHORT CHAR INT etc. 
- * so that method overloads can be accurately selected.
+ * This class exists for classifying wrapped class and primitive types as BYTE SHORT CHAR INT etc. 
+ * so that method overloads can be accurately selected by the JPI.
  */
 enum NumRank {
   NAN,
@@ -137,11 +136,12 @@ enum NumRank {
     } // error
   }
 
-  // coupled w Importer
+  // coupled w JPI
   static int scoreMatch(Object argObj, Class<?> argClass, Class<?> paramClass) {
     NumRank argRank;
     NumRank paramRank = rank(paramClass);
-    boolean bigDecPassed = BigDecimal.class.isAssignableFrom(argClass) && JPI.recastingBigDecs;
+    boolean bigDecPassed = BigDecimal.class.isAssignableFrom(argClass)
+                        && JPI.isRecastingBigDecimals();
     argRank = bigDecPassed ? rank((BigDecimal) argObj) : rank(argClass);
     if (argRank == NAN) {
       return 0; 

@@ -14,17 +14,24 @@ import java.util.HashMap;
 import java.util.List;
 
 /*** This class handles storage and caching of class info of Java import strings, along with
- * reflective method / constructor calls, field getting / setting.
+ * reflective method / constructor calls, and field getting / setting.
  * By default, when resolving which method / constructor overload to get or call, 
- * subclasses of {@link java.lang.Number} which are function arguments 
- * will be recast for widening conversions. For Java functions whhich take an {@code Object[]}
- * parameter, if there is not a more suitable function found, 
- * {@link java.util.List} class (or subclass) arguments will be converted to 
+ * passed {@link java.lang.Number Number} or Number-subclass arguments
+ * will be recast for widening conversions. 
+ * {@link java.math.BigDecimal BigDecimal} type Numbers are an opt-out exception to this 
+ * (see {@link #setRecastBigDecimals(boolean)}).
+ * For Java functions whhich take an {@code Object[]} parameter,
+ * if there is not a more suitable function found, 
+ * {@link java.util.List List} type (or subclass) arguments will be converted to 
  * {@code Object[]} arrays (by calling {@link java.util.List#toArray()}).
+ * This class provides no means of accessing non-{@code public} entities.
+ * <p> Extra notes: 1. Enum constants are treated as fields. 
+ * 2. Passing {@code Class}-type arguments to public JPI methods is synonymous 
+ * with passing a static class in the form of an argument.
  */
 public class JPI {
 
-  private class ExecutableStore { // for caching
+  private class ExecutableStore { // for caching methods
     private HashMap<String, HashMap<String, List<Executable>>> table = new HashMap<>();
 
     HashMap<String, List<Executable>> in(String className) {
@@ -32,7 +39,9 @@ public class JPI {
     }
 
     void registerClass(String className) {
-      table.put(className, new HashMap<>());
+      if (!table.containsKey(className)) {
+        table.put(className, new HashMap<>());
+      }
     }
 
     boolean contains(String className) {
@@ -48,8 +57,32 @@ public class JPI {
   protected static ExecutableStore constructorStore = imp.new ExecutableStore();
   protected static ExecutableStore methodStore = imp.new ExecutableStore();
   private static HashMap<String, String> simpleToFullNames = new HashMap<>();
-  static boolean recastingBigDecs = true;
+  private static boolean recastingBigDecs = true;
 
+  /***
+   * If {@code recast} is {@code false}, 
+   * then no attempt will be made to match passed {@link java.lang.BigDecimal BigDecimal}
+   * or BigDecimal-subclass types with other {@link java.lang.Number Number} 
+   * types when using reflection to resolve function overloads. (This is not default behaviour.)
+   *
+   * @param recast if {@code false}, turns off BigDecimal recasting. Otherwise, turns it on.
+   */
+  public static void setRecastBigDecimals(boolean recast) {
+    recastingBigDecs = recast;
+  }
+
+  /**
+   * Returns {@code true} if attempts will be made to match 
+   * {@link java.lang.BigDecimal BigDecimal} arguments with other 
+   * {@link java.lang.Number Number} types when resolving overloads.
+   * Returns {@code false} otherwise.
+   * @return whether or not attempts are being made to match 
+   *         BigDecimal type args to other Number params.
+   * 
+   */
+  public static boolean isRecastingBigDecimals() {
+    return recastingBigDecs;
+  }
 
   private static void registerClass(ClassInfo ci) {
     registerClass(ci.getName(), ci.getSimpleName(), ci.isEnum());
@@ -67,7 +100,7 @@ public class JPI {
     simpleToFullNames.put(simpleClassName, className);
   }
 
-  // if argument o is not a class, it will call getClass()
+  // If argument o is not a class, this method calls getClass(), otherwise returns o
   protected static Class<?> tryGetClass(Object o) {
     Class<?> ret = o.getClass();
     return (ret.equals(Class.class)) ? (Class<?>) o : ret;
@@ -101,7 +134,7 @@ public class JPI {
     return res;
   }
 
-  protected static boolean wasImported(String importString) {
+  private static boolean wasImported(String importString) {
     return scanNames.containsKey(importString);
   }
 
@@ -109,7 +142,7 @@ public class JPI {
    * Stores public, relevant class info by taking a String that mirrors a Java import statement
    * and reading the class info without loading the class itself
    * (e.g. importString.equals("java.util.ArrayList")).
-   * The wildcard character (*) is valid for packages, but not for inner classes.
+   * The wildcard character (*) is valid for packages/classes, but not for inner classes.
    *
    * @param importString the import string
    * @return true if the scan was successful, false if it was a failure
@@ -130,7 +163,6 @@ public class JPI {
                   .scan();
         res = resolveForInnerClasses(res, importString);
       }
-      
       ClassInfoList ciList = res.getAllStandardClasses();
       if (ciList.isEmpty()) {
         return false;
@@ -150,8 +182,12 @@ public class JPI {
     return true;
   }
 
-  public static String getFullClassName(String simpleName) {
-    return simpleToFullNames.get(simpleName);
+  public static String getFullClassName(String simpleClassName) {
+    return simpleToFullNames.get(simpleClassName);
+  }
+
+  public static boolean classImported(String simpleClassName) {
+    return classRegistered(getFullClassName(simpleClassName));
   }
 
   private static boolean classRegistered(String className) {
@@ -160,8 +196,8 @@ public class JPI {
 
   private static boolean callsLoaded(String className) {
     HashMap<String, List<Executable>> conStore = constructorStore.in(className);
-    return conStore != null && conStore.size() > 0
-        || methodStore.in(className).size() > 0;
+    return methodStore.in(className).size() > 0
+        || conStore != null && conStore.size() > 0;
   }
 
   private static void storeFunctions(Class<?> clazz) {
@@ -225,6 +261,7 @@ public class JPI {
         methodStore.in(clazz.getName()).get(methodName), passedArgs);
   }
 
+  // calls scoreMatch to get the best matching executable based on passedArgs
   private static Executable getBestMatch(
       List<Executable> options, List<Object> passedArgs) {
     Executable bestMatch = null;
@@ -243,7 +280,7 @@ public class JPI {
     return Modifier.isStatic(clazz.getModifiers());
   }
 
-  public static Object newInnerInstance(
+  private static Object newInnerInstance(
       Object outerInstance, Class<?> inner, List<Object> passedArgs) {
     if (!classIsStatic(inner)) {
       if (outerInstance.getClass().equals(Class.class)) {
@@ -259,38 +296,44 @@ public class JPI {
   }
 
   /**
-   * Call a method or constructor, matched based on {@code passedArgs} and 
-   * return the result.
+   * Call a method, constructor, or inner class constructor
+   * matched based on {@code passedArgs}, and 
+   * return the result. If {@code functionName} matches the 
+   * {@link java.lang.Class#getSimpleName() simplified} {@code caller} class name,
+   * this method will call the best-fitting constructor of the {@code caller}.
+   * The same principle applies if {@code functionName} matches the name of an
+   * inner class. (Be sure not to attempt construction of a non-static inner class from 
+   * a static ({@code Class}-type) {@code caller} object)
    *
-   * @param instance the object instance / class
+   * @param caller the object instance or class
    * @param functionName the name of the function (a simple class name for constructors)
    * @param passedArgs the arguments to resolve and pass to the method
    * @return the result of the function call, or {@code null} if the matched method is returns null
    */
   public static Object call(
-      Object instance, String functionName, List<Object> passedArgs) {
-    Class<?> clazz = tryGetClass(instance);
+      Object caller, String functionName, List<Object> passedArgs) {
+    Class<?> clazz = tryGetClass(caller);
     Class<?> inner = getInnerClass(clazz, functionName);
     if (clazz.getSimpleName().equals(functionName)) {
       return newInstance(clazz, passedArgs);
     } else {
       inner = getInnerClass(clazz, functionName);
       if (inner != null) {
-        return newInnerInstance(instance, inner, passedArgs);
+        return newInnerInstance(caller, inner, passedArgs);
       } else {
-        return invoke(instance, functionName, passedArgs);
+        return invoke(caller, functionName, passedArgs);
       }
     }
   } 
 
   public static Object invoke(
-      Object instance, String methodName, List<Object> passedArgs) {
-    Method m = getMethod(instance, methodName, passedArgs);
+      Object caller, String methodName, List<Object> passedArgs) {
+    Method m = getMethod(caller, methodName, passedArgs);
     try {
       if (m == null) {
         // error
       } else {
-        return m.invoke(instance, fitArgsToFunction(passedArgs, m));
+        return m.invoke(caller, fitArgsToFunction(passedArgs, m));
       }
     } catch (Exception ex) {
       ex.printStackTrace();
@@ -339,6 +382,14 @@ public class JPI {
     return null;
   }
 
+  /**
+   * Get the value of a field for Object o based on the passed fieldName String.
+   * Enum constants are treated as fields and can be accessed via this method.
+   *
+   * @param o object to pull a field from
+   * @param fieldName name of the field 
+   * @return the field 
+   */
   public static Object getField(Object o, String fieldName) {
     try {
       Class<?> clazz = tryGetClass(o);
@@ -353,7 +404,16 @@ public class JPI {
       return null; // error
     }
   }
-
+  
+  /**
+   * Get the value of a field or static inner class for {@code o} 
+   * based on the passed {@code fieldName}.
+   * Enum constants are treated as fields and can be accessed via this method.
+   *
+   * @param o object to pull a field / inner class from
+   * @param fieldName name of the field / inner class
+   * @return the field / inner class
+   */
   public static Object getFieldOrInnerClass(Object o, String fieldName) {
     try {
       Class<?> innerClazz = getInnerClass(o, fieldName);
@@ -405,26 +465,28 @@ public class JPI {
     }
   }
 
+  // assigns a score on how close arguments for a method matches
+  // each particular overload
   protected static int scoreMatch(Executable c, List<Object> passedArgs) {
     int ret = argBasicCheck(c, passedArgs);
     if (Math.abs(ret) == 1) {
-      return ret;
+      return ret; // 1 pt: no args and no params | -1 pt: bad match (arg and param count mismatch)
     }
     for (int i = 0; i < passedArgs.size(); i++) {
       Object currentArg = passedArgs.get(i);
       Class<?> paramClass = c.getParameterTypes()[i];
       int nullAndObjectScore = scoreForObjectsAndNulls(currentArg, paramClass);
       if (nullAndObjectScore == 0) {
-        return -1;
+        return -1; // bad match
       } else {
         if (nullAndObjectScore > 1) {
-          ret += nullAndObjectScore - 1;
+          ret += nullAndObjectScore - 1; // 1 pt: null arg, | 2 pts: null arg to Object param
           continue;
         }
       }
       Class<?> argClass = currentArg.getClass();
       if (argClass.equals(paramClass)) {
-        ret += 6; // same class
+        ret += 6; // 6 pts: same class
       } else if (paramClass.isAssignableFrom(argClass)) {
         ret += 5; // subclass
       } else if (paramClass.equals(Object[].class) && List.class.isAssignableFrom(argClass)) {
@@ -432,15 +494,22 @@ public class JPI {
       } else {
         int numRankScore = NumRank.scoreMatch(currentArg, argClass, paramClass);
         if (numRankScore == 0) {
-          return -1;
+          return -1; // bad match
         } else {
-          ret += numRankScore;
+          ret += numRankScore; // see NumRank.scoreMatch()
         }
       }
     }
     return ret;
   }
 
+  /**
+   * Convert argument Number type args to the target parameter Number type if necessary.
+   * Convert list arguments to Object[] arguments if necessary.
+   * @param args arguments to be passed to the method
+   * @param e target method / constructor
+   * @return
+   */
   @SuppressWarnings("unchecked")
   protected static Object[] fitArgsToFunction(List<Object> args, Executable e) {
     Object[] ret = new Object[args.size()];
@@ -464,7 +533,7 @@ public class JPI {
     return ret;
   }
 
-  protected static Object fitNumberToFunction(Number numArg, Class<?> currentParamClass) {
+  private static Object fitNumberToFunction(Number numArg, Class<?> currentParamClass) {
     switch (NumRank.rank(currentParamClass)) {
       case BYTE:
         return numArg.byteValue();
