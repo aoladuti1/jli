@@ -17,7 +17,7 @@ import java.util.List;
  * reflective method / constructor calls, and field getting / setting.
  * By default, when resolving which method / constructor overload to get or call, 
  * passed {@link java.lang.Number Number} or Number-subclass arguments
- * will be recast for widening conversions. 
+ * will be recast for widening conversions (including to {@code char} parameters). 
  * {@link java.math.BigDecimal BigDecimal} type Numbers are an opt-out exception to this 
  * (see {@link #setRecastBigDecimals(boolean)}).
  * For Java functions whhich take an {@code Object[]} parameter,
