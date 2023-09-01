@@ -13,7 +13,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-/*** This class handles storage and caching of class info of Java import strings, along with
+/**
+ * This class handles storage and caching of class info of Java import strings, along with
  * reflective method / constructor calls, and field getting / setting.
  * By default, when resolving which method / constructor overload to get or call, 
  * passed {@link java.lang.Number Number} or Number-subclass arguments
@@ -25,11 +26,12 @@ import java.util.List;
  * {@link java.util.List List} type (or subclass) arguments will be converted to 
  * {@code Object[]} arrays (by calling {@link java.util.List#toArray()}).
  * This class provides no means of accessing non-{@code public} entities.
- * <p> Extra notes: 1. Enum constants are treated as fields. 
- * 2. Passing {@code Class}-type arguments to public JPI methods is synonymous 
- * with passing a static class in the form of an argument.
+ *
+ * <p>Extra notes: 1. Enum constants are treated as fields. 
+ * 2. Passing {@code Class}-type arguments to public Binder methods is synonymous 
+ * with passing a static class (or its code-defined information) in the form of an argument.
  */
-public class JPI {
+public class Binder {
 
   private class ExecutableStore { // for caching methods
     private HashMap<String, HashMap<String, List<Executable>>> table = new HashMap<>();
@@ -50,16 +52,16 @@ public class JPI {
 
   }
 
-  private JPI() {}
+  private Binder() {}
 
-  private static final JPI imp = new JPI();
+  private static final Binder imp = new Binder();
   private static HashMap<String, Object> scanNames = new HashMap<>();
   protected static ExecutableStore constructorStore = imp.new ExecutableStore();
   protected static ExecutableStore methodStore = imp.new ExecutableStore();
   private static HashMap<String, String> simpleToFullNames = new HashMap<>();
   private static boolean recastingBigDecs = true;
 
-  /***
+  /**
    * If {@code recast} is {@code false}, 
    * then no attempt will be made to match passed {@link java.lang.BigDecimal BigDecimal}
    * or BigDecimal-subclass types with other {@link java.lang.Number Number} 
@@ -76,6 +78,7 @@ public class JPI {
    * {@link java.lang.BigDecimal BigDecimal} arguments with other 
    * {@link java.lang.Number Number} types when resolving overloads.
    * Returns {@code false} otherwise.
+   *
    * @return whether or not attempts are being made to match 
    *         BigDecimal type args to other Number params.
    * 
@@ -246,12 +249,13 @@ public class JPI {
   }
 
   /**
-   * Retrieve the {@code Method} matching the provided name and arguments.
+   * Retrieve the {@code Method} which is the closest match for the provided name and arguments.
+   * Returns {@code null} if no suitable method is found.
    *
    * @param o the object or class which contains the desired method
    * @param methodName the name of the method
-   * @param passedArgs 
-   * @return
+   * @param passedArgs the arguments to try against method parameters
+   * @return the best matching method, or {@code null} if there wasn't one
    */
   public static Method getMethod(
       Object o, String methodName, List<Object> passedArgs) {
@@ -367,7 +371,7 @@ public class JPI {
       try {
         return bestMatch.newInstance(fitArgsToFunction(passedArgs, bestMatch));
       } catch (Exception ex) {
-        ex.printStackTrace();
+        return null;
       }
     }
     return null; // error
@@ -467,7 +471,7 @@ public class JPI {
 
   // assigns a score on how close arguments for a method matches
   // each particular overload
-  protected static int scoreMatch(Executable c, List<Object> passedArgs) {
+  private static int scoreMatch(Executable c, List<Object> passedArgs) {
     int ret = argBasicCheck(c, passedArgs);
     if (Math.abs(ret) == 1) {
       return ret; // 1 pt: no args and no params | -1 pt: bad match (arg and param count mismatch)
