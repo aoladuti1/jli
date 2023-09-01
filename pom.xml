@@ -5,9 +5,9 @@
   <version>0.1</version>
 
   <properties>
-    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.source>19</maven.compiler.source>
     <maven.plugin.validation>VERBOSE</maven.plugin.validation>
-    <maven.compiler.target>1.8</maven.compiler.target>
+    <maven.compiler.target>19</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <junit.version>5.6.0</junit.version>
     <maven-enforcer-plugin.version>3.0.0-M3</maven-enforcer-plugin.version>
