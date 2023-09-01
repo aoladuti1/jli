@@ -25,9 +25,9 @@ enum NumRank {
   static final BigDecimal LONGMAX = new BigDecimal(Long.MAX_VALUE);
   static final BigDecimal LONGMIN = new BigDecimal(Long.MIN_VALUE);
   static final BigDecimal FLOATMAX = new BigDecimal(Float.MAX_VALUE);
-  static final BigDecimal FLOATNEGMAX = new BigDecimal(Float.MAX_VALUE + 0.0001d);
+  static final BigDecimal FLOATNEGMAX = new BigDecimal(-Float.MAX_VALUE);
   static final BigDecimal DOUBLEMAX = new BigDecimal(Double.MAX_VALUE);
-  static final BigDecimal DOUBLENEGMAX = new BigDecimal(Double.MAX_VALUE + 0.0001d);
+  static final BigDecimal DOUBLENEGMAX = new BigDecimal(-Double.MAX_VALUE);
 
   private static NumRank primitiveRank(Class<?> argClass) {
     if (argClass.equals(byte.class)) {
@@ -141,7 +141,7 @@ enum NumRank {
     NumRank argRank;
     NumRank paramRank = rank(paramClass);
     boolean bigDecPassed = BigDecimal.class.isAssignableFrom(argClass)
-                        && JPI.isRecastingBigDecimals();
+                        && Binder.isRecastingBigDecimals();
     argRank = bigDecPassed ? rank((BigDecimal) argObj) : rank(argClass);
     if (argRank == NAN) {
       return 0; 
