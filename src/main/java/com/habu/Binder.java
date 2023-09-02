@@ -4,6 +4,8 @@ import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
 import io.github.classgraph.ScanResult;
+
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
@@ -14,13 +16,15 @@ import java.util.HashMap;
 import java.util.List;
 
 /**
- * This class handles storage and caching of class info of Java import strings, along with
- * reflective method / constructor calls, and field getting / setting.
+ * This class handles storage and caching of {@code public} 
+ * class info of Java import strings, along with
+ * reflection-based method / constructor calls, and field getting / setting.
  * By default, when resolving which method / constructor overload to get or call, 
  * passed {@link java.lang.Number Number} or Number-subclass arguments
  * will be recast for widening conversions (including to {@code char} parameters). 
  * {@link java.math.BigDecimal BigDecimal} type Numbers are an opt-out exception to this 
- * (see {@link #setRecastBigDecimals(boolean)}).
+ * (see {@link #setRecastBigDecimals(boolean)}). BigDecimals which are whole numbers will be
+ * primarily treated as {@code Integer} arguments.
  * For Java functions whhich take an {@code Object[]} parameter,
  * if there is not a more suitable function found, 
  * {@link java.util.List List} type (or subclass) arguments will be converted to 
@@ -58,7 +62,7 @@ public class Binder {
   private static HashMap<String, Object> scanNames = new HashMap<>();
   protected static ExecutableStore constructorStore = imp.new ExecutableStore();
   protected static ExecutableStore methodStore = imp.new ExecutableStore();
-  private static HashMap<String, String> simpleToFullNames = new HashMap<>();
+  static HashMap<String, String> simpleToFullNames = new HashMap<>();
   private static boolean recastingBigDecs = true;
 
   /**
@@ -146,6 +150,8 @@ public class Binder {
    * and reading the class info without loading the class itself
    * (e.g. importString.equals("java.util.ArrayList")).
    * The wildcard character (*) is valid for packages/classes, but not for inner classes.
+   * Only {@code public} classes may be imported.
+   * Only {@code public static} inner classes may be imported.
    *
    * @param importString the import string
    * @return true if the scan was successful, false if it was a failure
@@ -252,7 +258,7 @@ public class Binder {
    * Retrieve the {@code Method} which is the closest match for the provided name and arguments.
    * Returns {@code null} if no suitable method is found.
    *
-   * @param o the object or class which contains the desired method
+   * @param o the object instance or class which contains the desired method
    * @param methodName the name of the method
    * @param passedArgs the arguments to try against method parameters
    * @return the best matching method, or {@code null} if there wasn't one
