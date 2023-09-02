@@ -12,28 +12,21 @@ public class Tester {
   public static final int FLOAT = 7;
   public static final int DOUBLE = 8;
   public static final int OBJARR = 9;
-  public static final int INNER1 = 10;
-  public static final int INNER2 = 11;
-
 
   public static int id = -1;
 
   /*** . */
-  public static class Inner {
+  public static class StaticInner {
     public static int id = -1;
 
-    public static void callMe() {
-
+    public static boolean callMe() {
+      return true;
     }
     
-    public Inner() {
-      id = INNER1;
-    }
-    
-    public Inner(int o) {
-      id = INNER2;
-    }
   }
+
+  /** . */
+  public static class InnerToImport {}
 
   class InnerNoInt {
     public InnerNoInt(int o) throws NullPointerException {

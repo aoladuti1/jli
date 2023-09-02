@@ -27,6 +27,11 @@ class AppTest {
     return args;
   } 
 
+  ArrayList<Object> noArgs() {
+    args.clear();
+    return args;
+  } 
+
   @Test
   void testApp() {
     Binder.scanImport("com.habu.*");
@@ -60,12 +65,35 @@ class AppTest {
   @Test
   void testInnerConstructionAndRecasts() {
     Tester t = new Tester();
+    // passing an int should result in an error (null value)
     Object inner1 = Binder.call(t, "InnerNoInt", singleArg(1));
     Object inner2 = Binder.call(t, "InnerNoInt", singleArg(new BigDecimal(1.1)));
-    Binder.setRecastBigDecimals(false);
+    Binder.setRecastBigDecimals(false); // should result in an error (null value) now
     Object inner3 = Binder.call(t, "InnerNoInt", singleArg(new BigDecimal(1.1)));
     Binder.setRecastBigDecimals(true);
     assertTrue(inner1 == null && inner2 != null && inner3 == null);
   }
+
+  @Test
+  void callStaticInnerMethod() {
+    args.clear();
+    Class<?> staticInner = (Class<?>) Binder.getFieldOrInnerClass(Tester.class, "StaticInner");
+    assertTrue((boolean) Binder.call(staticInner, "callMe", noArgs()));
+  }
+
+  @Test
+  void varArgsTest() {
+    Binder.call(Tester.class, "varArgMethod", singleArg(new ArrayList<>()));
+    assertTrue(Tester.id == Tester.OBJARR);
+  }
+
+  @Test 
+  void importInnerClass() {
+    String innerSimpleName = "InnerToImport";
+    Binder.scanImport("com.habu.Tester.InnerToImport");
+    assertTrue(Binder.simpleToFullNames.containsKey(innerSimpleName));
+  }
+
+
 }
 
