@@ -331,19 +331,18 @@ public class Binder {
       if (inner != null) {
         return newInnerInstance(caller, inner, passedArgs);
       } else {
-        return invoke(caller, functionName, passedArgs);
+        return invoke(caller, getMethod(caller, functionName, passedArgs), passedArgs);
       }
     }
   } 
 
   public static Object invoke(
-      Object caller, String methodName, List<Object> passedArgs) {
-    Method m = getMethod(caller, methodName, passedArgs);
+      Object caller, Method method, List<Object> passedArgs) {
     try {
-      if (m == null) {
+      if (method == null) {
         // error
       } else {
-        return m.invoke(caller, fitArgsToFunction(passedArgs, m));
+        return method.invoke(caller, fitArgsToFunction(passedArgs, method));
       }
     } catch (Exception ex) {
       ex.printStackTrace();
