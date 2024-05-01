@@ -66,7 +66,7 @@ class AppTest {
   void testInnerConstructionAndRecasts() {
     Tester t = new Tester();
     // passing an int should result in an error (null value)
-    Object inner1 = Binder.getMethod(t, "InnerNoInt", singleArg(1));
+    Object inner1 = Binder.call(t, "InnerNoInt", singleArg(1));
     Object inner2 = Binder.call(t, "InnerNoInt", singleArg(new BigDecimal(1.1)));
     Binder.setRecastBigDecimals(false); // should result in an error (null value) now
     Object inner3 = Binder.call(t, "InnerNoInt", singleArg(new BigDecimal(1.1)));
