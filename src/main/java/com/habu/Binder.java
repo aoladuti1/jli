@@ -152,9 +152,11 @@ public class Binder {
    * The wildcard character (*) is valid for packages/classes, but not for inner classes.
    * Only {@code public} classes may be imported.
    * Only {@code public static} inner classes may be imported.
+   * TODO: have a smarter wasImported function for wildcards
    *
    * @param importString the import string
    * @return true if the scan was successful, false if it was a failure
+   * 
    */
   public static boolean scanImport(String importString) {
     if (!wasImported(importString)) {
@@ -178,6 +180,7 @@ public class Binder {
       }
       scanNames.put(importString, null);
       for (ClassInfo ci : ciList) {
+        // registers static or instant outer classes, but only static inner classes
         if (ci.isInnerClass()) {
           if (ci.isStatic()) {
             registerClass(ci.getName(), ci.getSimpleName(), ci.isEnum());
@@ -267,6 +270,9 @@ public class Binder {
       Object o, String methodName, List<Object> passedArgs) {
     Class<?> clazz = tryGetClass(o);
     storeFunctions(clazz);
+    if (methodStore.in(clazz.getName()).get(methodName) == null) {
+      return null; // error
+    }
     return (Method) getBestMatch(
         methodStore.in(clazz.getName()).get(methodName), passedArgs);
   }
@@ -335,6 +341,14 @@ public class Binder {
       }
     }
   } 
+
+  public static Class<?> forNameOrNull(String className) {
+    try {
+      return Class.forName(className);
+    } catch (Exception ex) {
+      return null;
+    }
+  }
 
   public static Object invoke(
       Object caller, Method method, List<Object> passedArgs) {
@@ -562,4 +576,6 @@ public class Binder {
         return numArg;
     }
   }
+
+  
 }
