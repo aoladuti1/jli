@@ -51,6 +51,7 @@ class AppTest {
   @Test
   void testEnum() { // null args should resolve to the object overload
     assertTrue(Binder.getField(EnumTester.class, "OK") == EnumTester.OK);
+    assertTrue(Binder.getFieldOrInnerClass(EnumTester.class, "OK") == EnumTester.OK);
   }
 
   @Test

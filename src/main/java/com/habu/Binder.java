@@ -4,8 +4,6 @@ import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
 import io.github.classgraph.ScanResult;
-
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
