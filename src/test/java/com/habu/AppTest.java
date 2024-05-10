@@ -31,8 +31,7 @@ class AppTest {
 
   @Test
   void testApp() {
-    Binder.scanImport("com.habu.*");
-    assertTrue(true);
+    assertTrue(Binder.scanImport("com.habu.*"));
   }
 
   @Test
@@ -52,6 +51,11 @@ class AppTest {
     } catch (Exception ex) {
       fail(ex.getMessage());
     }
+  }
+
+  @Test
+  void testStaticOuterInstanceInnerException() {
+    
   }
 
   @Test
