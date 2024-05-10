@@ -4,11 +4,10 @@ import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
 import io.github.classgraph.ScanResult;
-
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -16,46 +15,73 @@ import java.util.HashMap;
 import java.util.List;
 
 /**
- * This class handles storage and caching of {@code public} 
+ * This class handles storage and caching of {@code public}
  * class info of Java import strings, along with
  * reflection-based method / constructor calls, and field getting / setting.
- * By default, when resolving which method / constructor overload to get or call, 
+ * By default, when resolving which method / constructor overload to get or
+ * call,
  * passed {@link java.lang.Number Number} or Number-subclass arguments
- * will be recast for widening conversions (including to {@code char} parameters). 
- * {@link java.math.BigDecimal BigDecimal} type Numbers are an opt-out exception to this 
- * (see {@link #setRecastBigDecimals(boolean)}). BigDecimals which are whole numbers will be
+ * will be recast for widening conversions (including to {@code char}
+ * parameters).
+ * {@link java.math.BigDecimal BigDecimal} type Numbers are an opt-out exception
+ * to this
+ * (see {@link #setRecastBigDecimals(boolean)}). BigDecimals which are whole
+ * numbers will be
  * primarily treated as {@code Integer} arguments.
  * For Java functions whhich take an {@code Object[]} parameter,
- * if there is not a more suitable function found, 
- * {@link java.util.List List} type (or subclass) arguments will be converted to 
+ * if there is not a more suitable function found,
+ * {@link java.util.List List} type (or subclass) arguments will be converted to
  * {@code Object[]} arrays (by calling {@link java.util.List#toArray()}).
  * This class provides no means of accessing non-{@code public} entities.
  *
- * <p>Extra notes: 1. Enum constants are treated as fields. 
- * 2. Passing {@code Class}-type arguments to public Binder methods is synonymous 
- * with passing a static class (or its code-defined information) in the form of an argument.
+ * <p>Extra notes: 1. Enum constants are treated as fields.
+ * 2. Passing {@code Class}-type arguments to public Binder methods is
+ * synonymous
+ * with passing a static class (or its code-defined information) in the form of
+ * an argument.
+ * TODO: Make an instance class.
  */
 public class Binder {
 
-  private class ExecutableStore { // for caching methods
+  /* Contains a HashMap of (className, (executableName, Executable)) */
+  private class ExecutableStore { // for caching executables
     private HashMap<String, HashMap<String, List<Executable>>> table = new HashMap<>();
 
+    /**
+     * Get HashMap of executables stored in {@code className}.
+     *
+     * @param className the class name
+     * @return a HashMap of executables stored in {@code className}
+     */
     HashMap<String, List<Executable>> in(String className) {
       return table.get(className);
     }
 
+    /**
+     * Store {@code className} inside the internal 
+     * (className, (executableName, {@link java.lang.reflect.Executable Executable})) HashMap.
+     *
+     * @param className the class name to store (put)
+     */
     void registerClass(String className) {
       if (!table.containsKey(className)) {
         table.put(className, new HashMap<>());
       }
     }
 
+    /**
+     * Returns {@code true} if {@code className} is already registered, or {@code false} otherwise.
+     *
+     * @param className the class name
+     * @return {@code true} if {@code className} is already registered, or {@code false} otherwise
+     */
     boolean contains(String className) {
       return table.containsKey(className);
     }
 
   }
 
+  // TODO: delete when Binder becomes an instance class in future
   private Binder() {}
 
   private static final Binder imp = new Binder();
@@ -66,31 +92,36 @@ public class Binder {
   private static boolean recastingBigDecs = true;
 
   /**
-   * If {@code recast} is {@code false}, 
-   * then no attempt will be made to match passed {@link java.lang.BigDecimal BigDecimal}
-   * or BigDecimal-subclass types with other {@link java.lang.Number Number} 
-   * types when using reflection to resolve function overloads. (This is not default behaviour.)
+   * If {@code recast} is {@code false},
+   * then no attempt will be made to match passed {@link java.lang.BigDecimal
+   * BigDecimal}
+   * or BigDecimal-subclass types with other {@link java.lang.Number Number}
+   * types when using reflection to resolve function overloads. (This is not
+   * default behaviour.)
    *
-   * @param recast if {@code false}, turns off BigDecimal recasting. Otherwise, turns it on.
+   * @param recast if {@code false}, turns off BigDecimal recasting. Otherwise,
+   *               turns it on.
    */
+  // TODO: ensure this STAYS method static
   public static void setRecastBigDecimals(boolean recast) {
     recastingBigDecs = recast;
   }
 
   /**
-   * Returns {@code true} if attempts will be made to match 
-   * {@link java.lang.BigDecimal BigDecimal} arguments with other 
+   * Returns {@code true} if attempts will be made to match
+   * {@link java.lang.BigDecimal BigDecimal} arguments with other
    * {@link java.lang.Number Number} types when resolving overloads.
    * Returns {@code false} otherwise.
    *
-   * @return whether or not attempts are being made to match 
+   * @return whether or not attempts are being made to match
    *         BigDecimal type args to other Number params.
    * 
    */
   public static boolean isRecastingBigDecimals() {
     return recastingBigDecs;
   }
-
+  
+  // TODO: add specific simpleName Argument
   private static void registerClass(ClassInfo ci) {
     registerClass(ci.getName(), ci.getSimpleName(), ci.isEnum());
   }
@@ -108,6 +139,7 @@ public class Binder {
   }
 
   // If argument o is not a class, this method calls getClass(), otherwise returns o
+  // TODO: make private (if possible)
   protected static Class<?> tryGetClass(Object o) {
     Class<?> ret = o.getClass();
     return (ret.equals(Class.class)) ? (Class<?>) o : ret;
@@ -133,9 +165,9 @@ public class Binder {
         break;
       }
       res = new ClassGraph()
-                .enableSystemJarsAndModules()
-                .acceptClasses(findClassString)
-                .scan();
+          .enableSystemJarsAndModules()
+          .acceptClasses(findClassString)
+          .scan();
       findClassString = replaceLast(findClassString, ".", "\\$");
     } while (res.getPackageInfo().isEmpty());
     return res;
@@ -146,30 +178,35 @@ public class Binder {
   }
 
   /**
-   * Stores public, relevant class info by taking a String that mirrors a Java import statement
+   * Stores public, relevant class info by taking a String that mirrors a Java
+   * import statement
    * and reading the class info without loading the class itself
    * (e.g. importString.equals("java.util.ArrayList")).
-   * The wildcard character (*) is valid for packages/classes, but not for inner classes.
+   * The wildcard character (*) is valid for packages/classes, but not for inner
+   * classes.
    * Only {@code public} classes may be imported.
    * Only {@code public static} inner classes may be imported.
+   * TODO: have a smarter wasImported function for wildcards
+   * TODO: add a class alias argument for a manual simpleClassName
    *
    * @param importString the import string
    * @return true if the scan was successful, false if it was a failure
+   * 
    */
   public static boolean scanImport(String importString) {
     if (!wasImported(importString)) {
       ScanResult res;
       if (importString.endsWith("*")) {
         res = new ClassGraph()
-                  .enableSystemJarsAndModules()
-                  .acceptPackagesNonRecursive(
-                      importString.substring(0, importString.lastIndexOf('.')))
-                  .scan();
+            .enableSystemJarsAndModules()
+            .acceptPackagesNonRecursive(
+                importString.substring(0, importString.lastIndexOf('.')))
+            .scan();
       } else {
         res = new ClassGraph()
-                  .enableSystemJarsAndModules()
-                  .acceptPackagesNonRecursive(importString)
-                  .scan();
+            .enableSystemJarsAndModules()
+            .acceptPackagesNonRecursive(importString)
+            .scan();
         res = resolveForInnerClasses(res, importString);
       }
       ClassInfoList ciList = res.getAllStandardClasses();
@@ -178,6 +215,7 @@ public class Binder {
       }
       scanNames.put(importString, null);
       for (ClassInfo ci : ciList) {
+        // registers static or instant outer classes, but only static inner classes
         if (ci.isInnerClass()) {
           if (ci.isStatic()) {
             registerClass(ci.getName(), ci.getSimpleName(), ci.isEnum());
@@ -191,10 +229,18 @@ public class Binder {
     return true;
   }
 
+  /**
+   * Return the class name of the imported class associated with {@code simpleClassName},
+   * (e.g. {@code simpleClassName="Example"} may return {@code "hello.hi.Example"}).
+   *
+   * @param simpleClassName the simple class name
+   * @return the class name
+   */
   public static String getFullClassName(String simpleClassName) {
     return simpleToFullNames.get(simpleClassName);
   }
 
+  // TODO delete
   public static boolean classImported(String simpleClassName) {
     return classRegistered(getFullClassName(simpleClassName));
   }
@@ -223,8 +269,7 @@ public class Binder {
   }
 
   private static void storeMethods(Class<?> clazz, String className) {
-    for (Class<?> upperClazz = clazz; upperClazz != null; 
-        upperClazz = upperClazz.getSuperclass()) {
+    for (Class<?> upperClazz = clazz; upperClazz != null; upperClazz = upperClazz.getSuperclass()) {
       for (Method m : upperClazz.getMethods()) {
         HashMap<String, List<Executable>> smlTable = methodStore.in(className);
         String miName = m.getName();
@@ -241,8 +286,7 @@ public class Binder {
 
   private static void storeConstructors(Class<?> clazz, String className) {
     for (Constructor<?> c : clazz.getConstructors()) {
-      HashMap<String, List<Executable>> clTable =
-          constructorStore.in(className);
+      HashMap<String, List<Executable>> clTable = constructorStore.in(className);
       String conName = c.getName();
       if (clTable.containsKey(className)) {
         clTable.get(className).add(c);
@@ -255,10 +299,12 @@ public class Binder {
   }
 
   /**
-   * Retrieve the {@code Method} which is the closest match for the provided name and arguments.
+   * Retrieve the {@code Method} which is the closest match for the provided name
+   * and arguments.
    * Returns {@code null} if no suitable method is found.
    *
-   * @param o the object instance or class which contains the desired method
+   * @param o          the object instance or class which contains the desired
+   *                   method
    * @param methodName the name of the method
    * @param passedArgs the arguments to try against method parameters
    * @return the best matching method, or {@code null} if there wasn't one
@@ -267,11 +313,16 @@ public class Binder {
       Object o, String methodName, List<Object> passedArgs) {
     Class<?> clazz = tryGetClass(o);
     storeFunctions(clazz);
-    return (Method) getBestMatch(
-        methodStore.in(clazz.getName()).get(methodName), passedArgs);
+    List<Executable> methodOptions = methodStore.in(clazz.getName()).get(methodName);
+    if (methodOptions == null) {
+      return null;
+    } else {
+      return (Method) getBestMatch(methodOptions, passedArgs);
+    }
   }
 
   // calls scoreMatch to get the best matching executable based on passedArgs
+  // Returns null if no good match found
   private static Executable getBestMatch(
       List<Executable> options, List<Object> passedArgs) {
     Executable bestMatch = null;
@@ -283,18 +334,22 @@ public class Binder {
         bestMatch = e;
       }
     }
-    return bestMatch; // error if null
+    return bestMatch;
   }
 
   private static boolean classIsStatic(Class<?> clazz) {
     return Modifier.isStatic(clazz.getModifiers());
   }
 
+  // TODO: Write test to assert the exception is thrown
   private static Object newInnerInstance(
-      Object outerInstance, Class<?> inner, List<Object> passedArgs) {
+      Object outerInstance, Class<?> inner, List<Object> passedArgs)
+      throws InstantiationException, IllegalAccessException,
+      IllegalArgumentException, InvocationTargetException {
     if (!classIsStatic(inner)) {
       if (outerInstance.getClass().equals(Class.class)) {
-        return null; // error -- static ref to instance inner class
+        throw new InvocationTargetException(// -- calling a non-static inner from a static outer --
+          null, "Error: attempting to construct an inner class from a static outer class");
       }
       List<Object> augArgs = new ArrayList<>();
       augArgs.add(outerInstance);
@@ -306,22 +361,52 @@ public class Binder {
   }
 
   /**
-   * Call a method, constructor, or inner class constructor
-   * matched based on {@code passedArgs}, and 
-   * return the result. If {@code functionName} matches the 
+   * Call a method, constructor, or inner class constructor,
+   * selected based on the suitability of the arguments in {@code passedArgs} with 
+   * the parameters of {@code caller.functionName()}, and
+   * return the result. If {@code functionName} matches the
    * {@link java.lang.Class#getSimpleName() simplified} {@code caller} class name,
    * this method will call the best-fitting constructor of the {@code caller}.
    * The same principle applies if {@code functionName} matches the name of an
-   * inner class. (Be sure not to attempt construction of a non-static inner class from 
+   * inner class. (Be sure not to attempt construction of a non-static inner class
+   * from
    * a static ({@code Class}-type) {@code caller} object)
    *
-   * @param caller the object instance or class
-   * @param functionName the name of the function (a simple class name for constructors)
-   * @param passedArgs the arguments to resolve and pass to the method
-   * @return the result of the function call, or {@code null} if the matched method is returns null
+   * @param caller       the object instance or class
+   * @param functionName the name of the function (a simple class name for
+   *                     constructors)
+   * @param passedArgs   the arguments to resolve and pass to the method
+   * @return the result of the function call, or {@code null} if the matched
+   *         method is returns null
+   * @throws IllegalAccessException      if a {@code Constructor} object
+   *                                     is enforcing Java language access control
+   *                                     and the underlying
+   *                                     constructor is inaccessible.
+   * @throws IllegalArgumentException    if the number of actual
+   *                                     and formal parameters differ; if an
+   *                                     unwrapping
+   *                                     conversion for primitive arguments fails;
+   *                                     or if,
+   *                                     after possible unwrapping, a parameter
+   *                                     value
+   *                                     cannot be converted to the corresponding
+   *                                     formal
+   *                                     parameter type by a method invocation
+   *                                     conversion; if
+   *                                     this constructor pertains to an enum
+   *                                     class.
+   * @throws InstantiationException      if the class that declares the
+   *                                     underlying constructor represents an
+   *                                     abstract class.
+   * @throws InvocationTargetException   if an underlying constructor
+   *                                     throws an exception.
+   * @throws ExceptionInInitializerError if the initialization provoked
+   *                                     by this method fails.
    */
   public static Object call(
-      Object caller, String functionName, List<Object> passedArgs) {
+      Object caller, String functionName, List<Object> passedArgs)
+      throws InstantiationException, IllegalAccessException,
+      IllegalArgumentException, InvocationTargetException {
     Class<?> clazz = tryGetClass(caller);
     Class<?> inner = getInnerClass(clazz, functionName);
     if (clazz.getSimpleName().equals(functionName)) {
@@ -331,26 +416,82 @@ public class Binder {
       if (inner != null) {
         return newInnerInstance(caller, inner, passedArgs);
       } else {
-        return invoke(caller, functionName, passedArgs);
+        return invoke(caller, getMethod(caller, functionName, passedArgs), passedArgs);
       }
     }
-  } 
-
-  public static Object invoke(
-      Object caller, String methodName, List<Object> passedArgs) {
-    Method m = getMethod(caller, methodName, passedArgs);
-    try {
-      if (m == null) {
-        // error
-      } else {
-        return m.invoke(caller, fitArgsToFunction(passedArgs, m));
-      }
-    } catch (Exception ex) {
-      ex.printStackTrace();
-    }
-    return null; // error 
   }
 
+  /**
+   * Return the class matching the name {@code className}.
+   *
+   * @param className the full class name
+   * @return the class matching {@code className}
+   */
+  public static Class<?> forNameOrNull(String className) {
+    try {
+      return Class.forName(className);
+    } catch (Exception ex) {
+      return null;
+    }
+  }
+
+  /**
+   * Call a method and return the result.
+   *
+   * @param caller     the object which calls {@code method}
+   * @param method     the method to call
+   * @param passedArgs the arguments to pass to {@code method}
+   * @return the result of the method call
+   * @throws IllegalAccessException      if this {@code Method} object
+   *                                     is enforcing Java language access control
+   *                                     and the underlying
+   *                                     method is inaccessible.
+   * @throws IllegalArgumentException    if the method is an
+   *                                     instance method and the specified object
+   *                                     argument
+   *                                     is not an instance of the class or
+   *                                     interface
+   *                                     declaring the underlying method (or of a
+   *                                     subclass
+   *                                     or implementor thereof); if the number of
+   *                                     actual
+   *                                     and formal parameters differ; if an
+   *                                     unwrapping
+   *                                     conversion for primitive arguments fails;
+   *                                     or if,
+   *                                     after possible unwrapping, a parameter
+   *                                     value
+   *                                     cannot be converted to the corresponding
+   *                                     formal
+   *                                     parameter type by a method invocation
+   *                                     conversion.
+   * @throws InvocationTargetException   if the underlying method
+   *                                     throws an exception.
+   * @throws NullPointerException        if the specified object is null
+   *                                     and the method is an instance method.
+   * @throws ExceptionInInitializerError if the initialization
+   *                                     provoked by this method fails.
+   */
+  public static Object invoke(
+      Object caller, Method method, List<Object> passedArgs) 
+      throws IllegalAccessException, InvocationTargetException {
+    if (method != null) {
+      return method.invoke(caller, fitArgsToFunction(passedArgs, method));
+    } else {
+      throw new NullPointerException("Method is null / unmatched method based on passedArgs");
+    }
+  }
+
+  /**
+   * Returns the {@link java.lang.reflect.Constructor Constructor} of {@code clazz} 
+   * which is the closest match for the arguments {@code passedArgs}, or
+   * {@code null} if no suitable constructor is found.
+   *
+   * @param clazz      the class which contains the desired
+   *                   method
+   * @param passedArgs the arguments to attempt matching against constructor parameters
+   * @return the best matching constructor, or {@code null} if there wasn't one
+   */
   public static Constructor<?> getConstructor(Class<?> clazz, List<Object> passedArgs) {
     String className = clazz.getName();
     storeFunctions(clazz);
@@ -358,6 +499,18 @@ public class Binder {
         constructorStore.in(className).get(className), passedArgs);
   }
 
+  /**
+   * Returns the {@link java.lang.reflect.Constructor Constructor} 
+   * which is the closest match for the provided name and arguments {@code passedArgs}, or
+   * {@code null} if no suitable constructor is found.
+   *
+   * @param simpleClassName the simple name of the class 
+   *                        (e.g. {@code simpleClassName="Example"} 
+   *                        may return {@code "hello.hi.Example"})
+   * @param passedArgs the arguments to try against method parameters
+   * @return the best matching method, or {@code null} if there wasn't one
+   */
+  // TODO: Delete
   public static Constructor<?> getConstructor(String simpleClassName, List<Object> passedArgs) {
     if (!simpleToFullNames.containsKey(simpleClassName)) {
       try {
@@ -371,16 +524,48 @@ public class Binder {
     }
   }
 
-  public static Object newInstance(Class<?> clazz, List<Object> passedArgs) {
+  /**
+   * Returns a newly created instance of {@code clazz} generated from the best matching constructor
+   * for the arguments in {@code passedArgs}.
+   *
+   * @param clazz      class to instatniate
+   * @param passedArgs arguments for the constructor
+   * @return a new instance of {@code clazz} from the best-matching constructor
+   *         arguments in {@code passedArgs}
+   * @throws IllegalAccessException      if this {@code Constructor} object
+   *                                     is enforcing Java language access control
+   *                                     and the underlying
+   *                                     constructor is inaccessible.
+   * @throws IllegalArgumentException    if the number of actual
+   *                                     and formal parameters differ; if an
+   *                                     unwrapping
+   *                                     conversion for primitive arguments fails;
+   *                                     or if,
+   *                                     after possible unwrapping, a parameter
+   *                                     value
+   *                                     cannot be converted to the corresponding
+   *                                     formal
+   *                                     parameter type by a method invocation
+   *                                     conversion; if
+   *                                     this constructor pertains to an enum
+   *                                     class.
+   * @throws InstantiationException      if the class that declares the
+   *                                     underlying constructor represents an
+   *                                     abstract class.
+   * @throws InvocationTargetException   if the underlying constructor
+   *                                     throws an exception.
+   * @throws ExceptionInInitializerError if the initialization provoked
+   *                                     by this method fails.
+   */
+  public static Object newInstance(Class<?> clazz, List<Object> passedArgs)
+      throws InstantiationException, IllegalAccessException,
+      IllegalArgumentException, InvocationTargetException {
     Constructor<?> bestMatch = getConstructor(clazz, passedArgs);
     if (bestMatch != null) {
-      try {
-        return bestMatch.newInstance(fitArgsToFunction(passedArgs, bestMatch));
-      } catch (Exception ex) {
-        return null;
-      }
+      return bestMatch.newInstance(fitArgsToFunction(passedArgs, bestMatch));
     }
-    return null; // error
+    throw new IllegalArgumentException(
+        "Cannot match a constructor for " + clazz.getName() + " to passedArgs");
   }
 
   private static Class<?> getInnerClass(Object outer, String innerClassName) {
@@ -389,16 +574,16 @@ public class Binder {
         return innerClazz;
       }
     }
-    return null;
+    return null; // Inner class not found
   }
 
   /**
-   * Get the value of a field for Object o based on the passed fieldName String.
+   * Get the value of a field for {@code o} based on the passed {@code fieldName} String.
    * Enum constants are treated as fields and can be accessed via this method.
    *
-   * @param o object to pull a field from
-   * @param fieldName name of the field 
-   * @return the field 
+   * @param o         object to pull a field from
+   * @param fieldName name of the field
+   * @return the field associated to {@code fieldName} or {@code null} if there isn't one
    */
   public static Object getField(Object o, String fieldName) {
     try {
@@ -411,16 +596,16 @@ public class Binder {
       }
     } catch (Exception ex) {
       ex.printStackTrace();
-      return null; // error
+      return null; // Field not found
     }
   }
-  
+
   /**
-   * Get the value of a field or static inner class for {@code o} 
+   * Get the value of a field or static inner class for {@code o}
    * based on the passed {@code fieldName}.
    * Enum constants are treated as fields and can be accessed via this method.
    *
-   * @param o object to pull a field / inner class from
+   * @param o         object to pull a field / inner class from
    * @param fieldName name of the field / inner class
    * @return the field / inner class
    */
@@ -434,10 +619,18 @@ public class Binder {
       }
     } catch (Exception ex) {
       ex.printStackTrace();
-      return null; // error
+      return null; // Field not found
     }
   }
 
+  /**
+   * x.
+   *
+   * @param o x
+   * @param fieldName x
+   * @param value x
+   */
+  // TODO: delete - one random object mutation method seems out of place
   public static void setField(Object o, String fieldName, Object value) {
     try {
       tryGetClass(o).getField(fieldName).set(o, value);
@@ -514,11 +707,14 @@ public class Binder {
   }
 
   /**
-   * Convert argument Number type args to the target parameter Number type if necessary.
+   * Convert argument Number type args to the target parameter Number type if
+   * necessary.
    * Convert list arguments to Object[] arguments if necessary.
+   * TODO: convert 1-length String to char
+   *
    * @param args arguments to be passed to the method
-   * @param e target method / constructor
-   * @return
+   * @param e    target method / constructor
+   * @return an Object array of all arguments, altered or otherwise
    */
   @SuppressWarnings("unchecked")
   protected static Object[] fitArgsToFunction(List<Object> args, Executable e) {
@@ -543,6 +739,7 @@ public class Binder {
     return ret;
   }
 
+  // TypeCast numArg baased on the numerical ranking of currentParamClass
   private static Object fitNumberToFunction(Number numArg, Class<?> currentParamClass) {
     switch (NumRank.rank(currentParamClass)) {
       case BYTE:
@@ -563,4 +760,5 @@ public class Binder {
         return numArg;
     }
   }
+
 }

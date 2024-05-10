@@ -20,7 +20,6 @@ class AppTest {
    */
 
   static ArrayList<Object> args = new ArrayList<>();
-
   ArrayList<Object> singleArg(Object o) {
     args.clear();
     args.add(o);
@@ -45,16 +44,14 @@ class AppTest {
 
   @Test 
   void testConstruction() {
-    try {
-      assertTrue(Binder.call(Class.forName(Binder.getFullClassName("Tester")), null, args) != null);
-    } catch (Exception ex) {
-      ;
-    }
+    Class<?> testerClass = Binder.forNameOrNull(Binder.getFullClassName("Tester"));
+    assertTrue(Binder.call(testerClass, "Tester", noArgs()) != null);
   }
 
   @Test
   void testEnum() { // null args should resolve to the object overload
     assertTrue(Binder.getField(EnumTester.class, "OK") == EnumTester.OK);
+    assertTrue(Binder.getFieldOrInnerClass(EnumTester.class, "OK") == EnumTester.OK);
   }
 
   @Test
@@ -66,7 +63,7 @@ class AppTest {
   void testInnerConstructionAndRecasts() {
     Tester t = new Tester();
     // passing an int should result in an error (null value)
-    Object inner1 = Binder.call(t, "InnerNoInt", singleArg(1));
+    Object inner1 = Binder.getMethod(t, "InnerNoInt", singleArg(1));
     Object inner2 = Binder.call(t, "InnerNoInt", singleArg(new BigDecimal(1.1)));
     Binder.setRecastBigDecimals(false); // should result in an error (null value) now
     Object inner3 = Binder.call(t, "InnerNoInt", singleArg(new BigDecimal(1.1)));
@@ -94,6 +91,7 @@ class AppTest {
     assertTrue(Binder.simpleToFullNames.containsKey(innerSimpleName));
   }
 
-
+  
 }
+
 
