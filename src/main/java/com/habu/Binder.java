@@ -22,7 +22,8 @@ import java.util.List;
  * call,
  * passed {@link java.lang.Number Number} or Number-subclass arguments
  * will be recast for widening conversions (including to {@code char}
- * parameters).
+ * parameters). Furthermore, failing other String parameter matches, 
+ * 1-length Strings will be treated and converted to primitive {@code char} types.
  * {@link java.math.BigDecimal BigDecimal} type Numbers are an opt-out exception
  * to this
  * (see {@link #setRecastBigDecimals(boolean)}). BigDecimals which are whole
@@ -39,7 +40,7 @@ import java.util.List;
  * synonymous
  * with passing a static class (or its code-defined information) in the form of
  * an argument.
- * TODO: Make an instance class.
+ * TODO: Make this an instance class.
  */
 public class Binder {
 
@@ -58,8 +59,9 @@ public class Binder {
     }
 
     /**
-     * Store {@code className} inside the internal 
-     * (className, (executableName, {@link java.lang.reflect.Executable Executable})) HashMap.
+     * Store {@code className} inside the internal
+     * (className, (executableName, {@link java.lang.reflect.Executable
+     * Executable})) HashMap.
      *
      * @param className the class name to store (put)
      */
@@ -70,10 +72,12 @@ public class Binder {
     }
 
     /**
-     * Returns {@code true} if {@code className} is already registered, or {@code false} otherwise.
+     * Returns {@code true} if {@code className} is already registered, or
+     * {@code false} otherwise.
      *
      * @param className the class name
-     * @return {@code true} if {@code className} is already registered, or {@code false} otherwise
+     * @return {@code true} if {@code className} is already registered, or
+     *         {@code false} otherwise
      */
     boolean contains(String className) {
       return table.containsKey(className);
@@ -82,7 +86,8 @@ public class Binder {
   }
 
   // TODO: delete when Binder becomes an instance class in future
-  private Binder() {}
+  private Binder() {
+  }
 
   private static final Binder imp = new Binder();
   private static HashMap<String, Object> scanNames = new HashMap<>();
@@ -120,8 +125,8 @@ public class Binder {
   public static boolean isRecastingBigDecimals() {
     return recastingBigDecs;
   }
-  
-  // TODO: add specific simpleName Argument
+
+  // Potentially add specific simpleName Argument for aliasing (import x as y)
   private static void registerClass(ClassInfo ci) {
     registerClass(ci.getName(), ci.getSimpleName(), ci.isEnum());
   }
@@ -138,7 +143,8 @@ public class Binder {
     simpleToFullNames.put(simpleClassName, className);
   }
 
-  // If argument o is not a class, this method calls getClass(), otherwise returns o
+  // If argument o is not a class, this method calls getClass(), otherwise returns
+  // o
   // TODO: make private (if possible)
   protected static Class<?> tryGetClass(Object o) {
     Class<?> ret = o.getClass();
@@ -230,19 +236,16 @@ public class Binder {
   }
 
   /**
-   * Return the class name of the imported class associated with {@code simpleClassName},
-   * (e.g. {@code simpleClassName="Example"} may return {@code "hello.hi.Example"}).
+   * Return the class name of the imported class associated with
+   * {@code simpleClassName},
+   * (e.g. {@code simpleClassName="Example"} may return
+   * {@code "hello.hi.Example"}).
    *
    * @param simpleClassName the simple class name
    * @return the class name
    */
   public static String getFullClassName(String simpleClassName) {
     return simpleToFullNames.get(simpleClassName);
-  }
-
-  // TODO delete
-  public static boolean classImported(String simpleClassName) {
-    return classRegistered(getFullClassName(simpleClassName));
   }
 
   private static boolean classRegistered(String className) {
@@ -341,7 +344,6 @@ public class Binder {
     return Modifier.isStatic(clazz.getModifiers());
   }
 
-  // TODO: Write test to assert the exception is thrown
   private static Object newInnerInstance(
       Object outerInstance, Class<?> inner, List<Object> passedArgs)
       throws InstantiationException, IllegalAccessException,
@@ -349,7 +351,7 @@ public class Binder {
     if (!classIsStatic(inner)) {
       if (outerInstance.getClass().equals(Class.class)) {
         throw new InvocationTargetException(// -- calling a non-static inner from a static outer --
-          null, "Error: attempting to construct an inner class from a static outer class");
+            null, "Error: attempting to construct an inner class from a static outer class");
       }
       List<Object> augArgs = new ArrayList<>();
       augArgs.add(outerInstance);
@@ -362,8 +364,8 @@ public class Binder {
 
   /**
    * Call a method, constructor, or inner class constructor,
-   * where a particular overload is chosen based on the suitability 
-   * of the arguments in {@code passedArgs} for 
+   * where a particular overload is chosen based on the suitability
+   * of the arguments in {@code passedArgs} for
    * the parameters of {@code caller.functionName()}, and
    * return the result. If {@code functionName} matches the
    * {@link java.lang.Class#getSimpleName() simplified} {@code caller} class name,
@@ -400,9 +402,11 @@ public class Binder {
    *                                     underlying constructor represents an
    *                                     abstract class.
    * @throws InvocationTargetException   if an underlying constructor
-   *                                     throws an exception, or an attempt is made
-   *                                     to construct an inner class from a 
-   *                                     static {@link java.lang.Class class} object
+   *                                     throws an exception, or an attempt is
+   *                                     made
+   *                                     to construct an inner class from a
+   *                                     static {@link java.lang.Class class}
+   *                                     object
    *                                     {@code caller}.
    * @throws ExceptionInInitializerError if the initialization provoked
    *                                     by this method fails.
@@ -477,7 +481,7 @@ public class Binder {
    *                                     provoked by this method fails.
    */
   public static Object invoke(
-      Object caller, Method method, List<Object> passedArgs) 
+      Object caller, Method method, List<Object> passedArgs)
       throws IllegalAccessException, InvocationTargetException {
     if (method != null) {
       return method.invoke(caller, fitArgsToFunction(passedArgs, method));
@@ -487,13 +491,15 @@ public class Binder {
   }
 
   /**
-   * Returns the {@link java.lang.reflect.Constructor Constructor} of {@code clazz} 
+   * Returns the {@link java.lang.reflect.Constructor Constructor} of
+   * {@code clazz}
    * which is the closest match for the arguments {@code passedArgs}, or
    * {@code null} if no suitable constructor is found.
    *
    * @param clazz      the class which contains the desired
    *                   method
-   * @param passedArgs the arguments to attempt matching against constructor parameters
+   * @param passedArgs the arguments to attempt matching against constructor
+   *                   parameters
    * @return the best matching constructor, or {@code null} if there wasn't one
    */
   public static Constructor<?> getConstructor(Class<?> clazz, List<Object> passedArgs) {
@@ -504,32 +510,8 @@ public class Binder {
   }
 
   /**
-   * Returns the {@link java.lang.reflect.Constructor Constructor} 
-   * which is the closest match for the provided name and arguments {@code passedArgs}, or
-   * {@code null} if no suitable constructor is found.
-   *
-   * @param simpleClassName the simple name of the class 
-   *                        (e.g. {@code simpleClassName="Example"} 
-   *                        may return {@code "hello.hi.Example"})
-   * @param passedArgs the arguments to try against method parameters
-   * @return the best matching method, or {@code null} if there wasn't one
-   */
-  // TODO: Delete
-  public static Constructor<?> getConstructor(String simpleClassName, List<Object> passedArgs) {
-    if (!simpleToFullNames.containsKey(simpleClassName)) {
-      try {
-        return getConstructor(Class.forName(getFullClassName(simpleClassName)), passedArgs);
-      } catch (Exception ex) {
-        ex.printStackTrace();
-        return null; // error
-      }
-    } else {
-      return null; // error - class not imported
-    }
-  }
-
-  /**
-   * Returns a newly created instance of {@code clazz} generated from the best matching constructor
+   * Returns a newly created instance of {@code clazz} generated from the best
+   * matching constructor
    * for the arguments in {@code passedArgs}.
    *
    * @param clazz      class to instatniate
@@ -582,12 +564,14 @@ public class Binder {
   }
 
   /**
-   * Get the value of a field for {@code o} based on the passed {@code fieldName} String.
+   * Get the value of a field for {@code o} based on the passed {@code fieldName}
+   * String.
    * Enum constants are treated as fields and can be accessed via this method.
    *
    * @param o         object to pull a field from
    * @param fieldName name of the field
-   * @return the field associated to {@code fieldName} or {@code null} if there isn't one
+   * @return the field associated to {@code fieldName} or {@code null} if there
+   *         isn't one
    */
   public static Object getField(Object o, String fieldName) {
     try {
@@ -624,22 +608,6 @@ public class Binder {
     } catch (Exception ex) {
       ex.printStackTrace();
       return null; // Field not found
-    }
-  }
-
-  /**
-   * x.
-   *
-   * @param o x
-   * @param fieldName x
-   * @param value x
-   */
-  // TODO: delete - one random object mutation method seems out of place
-  public static void setField(Object o, String fieldName, Object value) {
-    try {
-      tryGetClass(o).getField(fieldName).set(o, value);
-    } catch (Exception ex) {
-      ex.printStackTrace();
     }
   }
 
@@ -699,6 +667,15 @@ public class Binder {
       } else if (paramClass.equals(Object[].class) && List.class.isAssignableFrom(argClass)) {
         ret += 4; // converting list to arr
       } else {
+        if (argClass.equals(String.class) 
+            && (paramClass.equals(Character.class) || paramClass.equals(char.class))) {
+          String s = (String) currentArg;
+          // a 1-length String will be treated as a char if necessary (NOT a character)
+          if (s.length() == 1) {
+            currentArg = s.charAt(0);
+            argClass = currentArg.getClass();
+          }
+        }
         int numRankScore = NumRank.scoreMatch(currentArg, argClass, paramClass);
         if (numRankScore == 0) {
           return -1; // bad match
@@ -711,13 +688,13 @@ public class Binder {
   }
 
   /**
-   * Convert argument Number type args to the target parameter Number type if
+   * Convert 1-length strings to character types if necessary.
+   * Convert {@link java.lang.Number Number} type args to the appropriate parameter numeric type if
    * necessary.
-   * Convert list arguments to Object[] arguments if necessary.
-   * TODO: convert 1-length String to char
+   * Convert list arguments to {@code Object[]} arguments if necessary.
    *
    * @param args arguments to be passed to the method
-   * @param e    target method / constructor
+   * @param e    best-matched overload for target method / constructor
    * @return an Object array of all arguments, altered or otherwise
    */
   @SuppressWarnings("unchecked")
@@ -731,7 +708,10 @@ public class Binder {
       } else {
         Class<?> argClass = args.get(i).getClass();
         Class<?> paramClass = paramClasses[i];
-        if (Number.class.isAssignableFrom(args.get(i).getClass())) {
+        if (argClass.equals(String.class) 
+            && paramClass.equals(Character.class) || paramClass.equals(char.class)) {
+          ret[i] = ((String) currentArg).charAt(0);
+        } else if (Number.class.isAssignableFrom(args.get(i).getClass())) {
           ret[i] = fitNumberToFunction((Number) args.get(i), paramClass);
         } else if (List.class.isAssignableFrom(argClass) && paramClass.equals(Object[].class)) {
           ret[i] = ((List<Object>) currentArg).toArray();
