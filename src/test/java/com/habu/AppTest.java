@@ -1,9 +1,11 @@
 package com.habu;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.lang.reflect.InvocationTargetException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import org.junit.jupiter.api.Test;
@@ -53,9 +55,13 @@ class AppTest {
     }
   }
 
-  @Test
+  @Test // trying to construct an inner class from a static outer class is illegal
   void testStaticOuterInstanceInnerException() {
-    
+    Class<?> x = StaticOuter.Inner.class;
+    Exception exception = assertThrows(InvocationTargetException.class, () -> {
+      Binder.call(x, "TheyNotLikeUs", noArgs());
+    });
+    assertTrue(exception.getMessage().contains("inner"));
   }
 
   @Test
