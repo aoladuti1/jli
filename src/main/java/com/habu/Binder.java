@@ -362,7 +362,8 @@ public class Binder {
 
   /**
    * Call a method, constructor, or inner class constructor,
-   * selected based on the suitability of the arguments in {@code passedArgs} with 
+   * where a particular overload is chosen based on the suitability 
+   * of the arguments in {@code passedArgs} for 
    * the parameters of {@code caller.functionName()}, and
    * return the result. If {@code functionName} matches the
    * {@link java.lang.Class#getSimpleName() simplified} {@code caller} class name,
@@ -399,7 +400,10 @@ public class Binder {
    *                                     underlying constructor represents an
    *                                     abstract class.
    * @throws InvocationTargetException   if an underlying constructor
-   *                                     throws an exception.
+   *                                     throws an exception, or an attempt is made
+   *                                     to construct an inner class from a 
+   *                                     static {@link java.lang.Class class} object
+   *                                     {@code caller}.
    * @throws ExceptionInInitializerError if the initialization provoked
    *                                     by this method fails.
    */
