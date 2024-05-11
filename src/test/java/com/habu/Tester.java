@@ -53,7 +53,7 @@ public class Tester {
   }
 
   public static void methodOverload(char o) {
-    id = INT;
+    id = CHAR;
   }
 
   public static void methodOverload(Integer o) {
