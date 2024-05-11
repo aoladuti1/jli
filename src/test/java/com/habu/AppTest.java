@@ -80,6 +80,16 @@ class AppTest {
   }
 
   @Test
+  void stringToChar() {
+    try {
+      Binder.call(Tester.class, "methodOverload", singleArg("x"));
+      assertTrue(Tester.id == Tester.CHAR);
+    } catch (Exception ex) {
+      fail(ex.getMessage());
+    }
+  }
+
+  @Test
   void testInnerConstructionAndRecasts() {
     Boolean success = true;
     Tester t = new Tester();
